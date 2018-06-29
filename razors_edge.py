@@ -10,8 +10,10 @@ To make this work:
 pip3 install mmh3 scapy
 """
 
+import os
 import mmh3
 import time
+import argparse
 from math import ceil, log
 from scapy.all import *
 
@@ -94,14 +96,6 @@ class TimingBloomFilter():
         return result
 
 
-# Create a filter with 500000 expected elements, 99.99% accuracy, and expire
-# elements after 1 hour. The size is very high for most hosts, but for
-# demonstration, it works well enough (you're not likely to make 500k unique
-# DNS requests in an hour). Sniffing DNS requests for the desired time limit
-# before deploying this would give a better idea of a value to use here.
-dns_filter = TimingBloomFilter(500000, 0.01, 1*60*60)
-
-
 def dns_sniff(pkt):
     """dns_sniff() - Check DNS queries against a timed filter.
 
@@ -127,9 +121,61 @@ def dns_sniff(pkt):
                 # alert. This just prints data to stdout rather than doing any
                 # useful alerting.
                 dns_filter.add(element_str)
-                print("%s -> %s -- %s" % (source_addr, dest_addr, query))
+                print("[%s] %s -> %s -- %s" % \
+                      (time.ctime(time.time()), source_addr, dest_addr, query))
 
 
-# Start the DNS sniffer. Probably will need to change the interface name here.
-sniff(iface="ens160", filter="udp dst port 53", prn=dns_sniff, store=0)
+def main():
+    """main() - program's entry point.
+    """
+    global dns_filter
+
+    description = "razors_edge.py -- by Daniel Roberson @dmfroberson"
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        "-s",
+        "--size",
+        default=500000,
+        type=int,
+        help="expected number of elements")
+    parser.add_argument(
+        "-a",
+        "--accuracy",
+        default=0.01,
+        type=int,
+        help="desired false positive rate. Default: 0.01")
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        default=24*60*60,
+        type=int,
+        help="seconds that a filter element remains valid. Default: 86400")
+    parser.add_argument(
+        "-i",
+        "--interface",
+        default="eth0",
+        help="interface to monitor")
+    args = parser.parse_args()
+
+    dns_filter = TimingBloomFilter(args.size, args.accuracy, args.timeout)
+
+    print("[+] razors_edge.py starting.")
+    print(" - Interface: %s" % args.interface)
+    print(" - # of elements: %d" % args.size)
+    print(" - Timeout: %d seconds" % args.timeout)
+    print(" - Accuracy: %s%%" % str(100 - args.accuracy))
+
+    # Start the DNS sniffer
+    try:
+        sniff(iface=args.interface,
+            filter="udp dst port 53",
+            prn=dns_sniff,
+            store=0)
+    except PermissionError:
+        print("[-] Can't open %s for sniffing. Are you root?" % args.interface)
+        exit(os.EX_USAGE)
+
+
+if __name__ == "__main__":
+    main()
 
