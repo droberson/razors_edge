@@ -15,6 +15,7 @@ TODO:
     - cli input sanitizations
     - "learning timeout" to avoid printing stuff like your monitoring services
       connecting to you or being queried.
+    - ignore hosts/networks
 """
 
 import os
