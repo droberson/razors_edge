@@ -12,7 +12,7 @@ pip3 install mmh3 scapy
 
 import mmh3
 import time
-from math import ceil, log, log2
+from math import ceil, log
 from scapy.all import *
 
 
