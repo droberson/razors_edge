@@ -8,6 +8,13 @@
 To make this work:
 
 pip3 install mmh3 scapy
+
+
+TODO:
+    - syslog
+    - cli input sanitizations
+    - "learning timeout" to avoid printing stuff like your monitoring services
+      connecting to you or being queried.
 """
 
 import os
